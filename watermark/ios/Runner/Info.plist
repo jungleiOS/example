@@ -2,10 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>APP需要您的同意，才能访问相册，以便于保存图片</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用于上传用户头像、保存图片</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>需要您的同意,才能访问麦克风</string>
+	<key>NSCameraUsageDescription</key>
+	<string>APP需要您的同意，才能使用相机，用于上传头像、保存图片</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Watermark</string>
+	<key>LSApplicationCategoryType</key>
+	<string></string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
