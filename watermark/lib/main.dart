@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -43,10 +44,11 @@ class _MyHomePageState extends State<MyHomePage> {
   ui.Image? _image;
   ui.Image? _composeImg;
 
+  String str = '';
+
   @override
   void initState() {
     super.initState();
-    createImage();
   }
 
   void createImage() {
@@ -65,32 +67,69 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _imagePath != null
-                ? Image.asset(_imagePath!)
-                : const Text('no select img'),
-            _image != null
-                ? RawImage(image: _image, fit: BoxFit.cover)
-                : const Text('no create img'),
-            _composeImg != null
-                ? RawImage(image: _composeImg!)
-                : const Text('no compose img'),
-            MaterialButton(
-              onPressed: openGallery,
-              child: const Text('选择图片'),
-            ),
-            MaterialButton(
-              onPressed: composeImage,
-              child: const Text('合成图片'),
-            ),
-          ],
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.title,
+          ),
+        ),
+        body: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _imagePath != null
+                  ? Image.asset(_imagePath!)
+                  : const Text('no select img'),
+              _image != null
+                  ? RawImage(image: _image, fit: BoxFit.cover)
+                  : const Text('no create img'),
+              _composeImg != null
+                  ? RawImage(image: _composeImg!)
+                  : const Text('no compose img'),
+              MaterialButton(
+                onPressed: openGallery,
+                child: const Text('第一步 选择图片'),
+              ),
+              TextField(
+                onChanged: (text) {
+                  str = text;
+                },
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: '第二步 输入你想转换的的字符',
+                  contentPadding: EdgeInsets.all(16.0),
+                ),
+              ),
+              MaterialButton(
+                onPressed: () async {
+                  _image = await stringToImage(
+                    text: str,
+                    textStyle: ui.TextStyle(fontSize: 48, color: Colors.blue),
+                  );
+                  setState(() {});
+                },
+                child: const Text('生成水印'),
+              ),
+              MaterialButton(
+                onPressed: () async {
+                  _image = await stringToImage(
+                    text: str,
+                    textStyle: ui.TextStyle(fontSize: 48, color: Colors.blue),
+                  );
+                  composeImage();
+                },
+                child: const Text('第三步 给你选择的图片加上字符水印'),
+              ),
+              MaterialButton(
+                onPressed: composeImage,
+                child: const Text('合成图片'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -137,62 +176,140 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void saveImage({required Uint8List imageData}) async {
+    final result = await ImageGallerySaver.saveImage(
+      imageData,
+      quality: 100,
+    );
+    final isSuccess = result['isSuccess'];
+    debugPrint(isSuccess ? '保存成功' : '保存失败');
+  }
+
+  Future<ui.Image> stringToImage1({
+    required String text,
+    required String targetImagePath,
+  }) async {
+    final originByteData = await rootBundle.load(_imagePath!);
+    final targetImg = img.decodeImage(originByteData.buffer.asUint8List());
+    var font = img.arial48;
+    font.size = 64;
+    final tempImg = img.drawString(
+      targetImg!,
+      text,
+      font: font,
+      color: img.ColorInt16.rgba(24, 134, 146, 1),
+      x: 0,
+      y: 20,
+    );
+    final newImg = img.copyResize(tempImg, width: tempImg.width * 4);
+    final newImage = await convert(image: newImg);
+    return newImage;
+  }
+
+  // 将文本转换为图片
   Future<ui.Image> stringToImage({
     required String text,
     required ui.TextStyle textStyle,
   }) async {
+    // 获取屏幕尺寸
     Size size = MediaQuery.of(context).size;
+    // 创建绘图记录器
     final picRecorder = ui.PictureRecorder();
+    // 创建段落构建器
     final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle());
+    // 设置段落样式
     paragraphBuilder.pushStyle(textStyle);
+    // 添加文本
     paragraphBuilder.addText(text);
+    // 构建段落
     final paragraph = paragraphBuilder.build()
       ..layout(ui.ParagraphConstraints(width: size.width));
+    // 计算行高
     final lineMetrics = paragraph.computeLineMetrics();
+    // 计算最大宽度
     var width = 0.0;
     for (var element in lineMetrics) {
       if (element.width > width) {
         width = element.width;
       }
     }
+    // 创建画布
     final cvs =
         Canvas(picRecorder, Rect.fromLTRB(0, 0, width, paragraph.height));
+    // 绘制段落
     cvs.drawParagraph(paragraph, const Offset(0.0, 0.0));
+    // 结束绘图记录
     final pic = picRecorder.endRecording();
+    // 将绘图记录转换为图片
     final img = await pic.toImage(width.toInt(), paragraph.height.toInt());
     return img;
   }
 
+
+  /// 将两张图片合成一张图片。
+  /// 此函数首先从给定的路径加载原始图片，然后加载要合成的图片，
+  /// 对加载的图片进行处理（如调整大小），并将它们合成在一起，
+  /// 最后将合成后的图片保存，并更新UI显示。
+  ///
+  /// @async 表示此函数为异步函数。
   void composeImage() async {
+    // 加载原始图片的字节数据
     final originByteData = await rootBundle.load(_imagePath!);
+    // 加载要合成的图片的字节数据
     final srcByteData =
-        await _image!.toByteData(format: ui.ImageByteFormat.png);
+    await _image!.toByteData(format: ui.ImageByteFormat.png);
+    // 解码原始图片
     final originImg = img.decodeImage(originByteData.buffer.asUint8List());
-    final srcImg = img.decodeImage(srcByteData!.buffer.asUint8List());
+    // 解码要合成的图片
+    var srcImg = img.decodeImage(srcByteData!.buffer.asUint8List());
+    // 调整要合成的图片的大小
+    srcImg = img.copyResize(srcImg!, width: srcImg.width * 4);
+    // 合成图片
     final newImg = img.compositeImage(
       originImg!,
-      srcImg!,
+      srcImg,
       center: true,
     );
-    final cmd = img.Command();
-    cmd.image(newImg);
-    cmd.encodePng();
-    debugPrint('合成图片正在编码并转换为uint8List ...');
-    final uint8List = await cmd.getBytesThread();
-    debugPrint('编码转换完成');
-    _composeImg = await _fun2(uint8List!);
-    /// 下面这种方法会阻塞UI线程导致卡顿
-    // final uint8List = img.encodePng(newImg);
-    // _composeImg = await _fun2(img.encodePng(newImg));
+    // 将合成后的图片转换为指定格式并保存
+    _composeImg = await convert(image: newImg);
+    // 更新UI
     setState(() {});
   }
 
+  /// 将给定的img.Image对象转换为ui.Image对象。
+  ///
+  /// @param image 必需，img.Image对象，待转换的图像。
+  /// @return 返回一个Future，该Future解析为ui.Image对象，表示转换后的图像。
+  Future<ui.Image> convert({required img.Image image}) async {
+    // 创建img.Command对象用于图像处理
+    final cmd = img.Command();
+    // 设置待处理的图像
+    cmd.image(image);
+    // 指定图像编码为PNG
+    cmd.encodePng();
+    // 在独立线程中获取图像的字节数据
+    final bytes = await cmd.getBytesThread();
+    // 使用字节数据解码为ui.Image对象
+    final newImage = await uiImageDecode(bytes!);
+    return newImage!;
+  }
 
-  Future<ui.Image?> _fun2(Uint8List list) async {
+
+   /// 异步解码图像数据。
+  ///
+  /// @param list 一个Uint8List类型的图像数据列表。
+  /// @return 返回一个Future，该Future解析为ui.Image类型的图像对象。如果解码失败，则返回null。
+  Future<ui.Image?> uiImageDecode(Uint8List list) async {
+    // 创建一个Completer来处理异步图像解码结果
     Completer<ui.Image> completer = Completer();
+
+    // 使用ui.decodeImageFromList异步解码图像数据，并在解码完成后通过Completer完成
     ui.decodeImageFromList(list, (ui.Image callBack) {
       completer.complete(callBack);
     });
+
+    // 返回Completer的Future，等待解码完成
     return completer.future;
   }
+
 }
