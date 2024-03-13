@@ -110,6 +110,7 @@ class _CameraHomePageState extends State<CameraHomePage>
     WidgetsBinding.instance.removeObserver(this);
     _flashModeControlRowAnimationController.dispose();
     _exposureModeControlRowAnimationController.dispose();
+    controller?.dispose();
     super.dispose();
   }
 

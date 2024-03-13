@@ -1,4 +1,5 @@
 import 'package:camera_demo/camera_home_page.dart';
+import 'package:camera_demo/qr_scanner_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -16,7 +17,41 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const CameraHomePage(),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Camera Demo'),
+      ),
+      body: Column(
+        children: [
+          MaterialButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const CameraHomePage()));
+            },
+            child: const Text('camera page'),
+          ),
+          MaterialButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const QRScannerPage()));
+            },
+            child: const Text('scanner page'),
+          ),
+        ],
+      ),
     );
   }
 }
