@@ -612,9 +612,13 @@ class _CameraHomePageState extends State<CameraHomePage>
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
+  void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) async {
     if (controller == null) {
       return;
+    }
+
+    if (Platform.isAndroid) {
+      await controller!.setFocusMode(FocusMode.locked);
     }
 
     final CameraController cameraController = controller!;
@@ -670,12 +674,7 @@ class _CameraHomePageState extends State<CameraHomePage>
                     .then((double value) => _maxAvailableExposureOffset = value)
               ]
             : <Future<Object?>>[],
-        cameraController
-            .getMaxZoomLevel()
-            .then((double value) => _maxAvailableZoom = value),
-        cameraController
-            .getMinZoomLevel()
-            .then((double value) => _minAvailableZoom = value),
+
       ]);
     } on CameraException catch (e) {
       switch (e.code) {
